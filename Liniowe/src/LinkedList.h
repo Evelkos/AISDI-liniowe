@@ -1,4 +1,4 @@
-L#ifndef AISDI_LINEAR_LINKEDLIST_H
+#ifndef AISDI_LINEAR_LINKEDLIST_H
 #define AISDI_LINEAR_LINKEDLIST_H
 
 #include <cstddef>
@@ -19,8 +19,8 @@ public:
   using reference = Type&;
   using const_pointer = const Type*;
   using const_reference = const Type&;
-  using node_type = struct Node {T data; Node *next; Node *previous;}   //wezel: zawiera dane oraz odpowiednie wskazania
-  using node_pointer = *Node;
+  using node_type = struct Node {Type data; Node *next; Node *previous;};   //wezel: zawiera dane oraz odpowiednie wskazania
+  using node_pointer = Node*;
 
   class ConstIterator;
   class Iterator;
@@ -33,71 +33,90 @@ private:
   node_pointer tail;  //wartownik
 
 public:
-  LinkedList()
+  //konstruktor podstawowy
+  LinkedList() : number_of_nodes(0)
   {
-    number_of_nodes = 0;
     this->head = this->tail = new Node;  //straznik
     this->tail->next = nullptr;
-    this->tail->prev = nullptr;
+    this->tail->previous = nullptr;
   }
 
+  //konstruktor z lista
   LinkedList(std::initializer_list<Type> l) : LinkedList()
   {
     for (auto& x : l) append(x);
   }
 
   //konstruktor kopiujacy
-  LinkedList(const LinkedList& other) : LinkedList()
+  LinkedList(const LinkedList& other) : LinkedList()  //tworzenie wlasnego wartownika
   {
-    node_pointer tmp_o = other.head;  //wskaznik tymczasowy - czyta po other
-    node_pointer tmp = this->head;    //potrzebny przy dodawaniu elementow do nowej listy
-    while(tmp_o != nullptr)
+    Iterator iter = other.begin();
+    while(iter != other.end())  //nie kopiujemy straznika
     {
-      this->head = new Node;
-      this->head->previous = nullptr;
-      this->head->next = tmp;
-      this->head->data = tmp_o->data; //tu moga pojawic sie problemy
-      tmp->previous = this->head;
-      tmp_o = tmp_o->next;
-      this->number_of_nodes++;        //UWAGA: nie liczymy wartownika
+      append(*iter); //append dostaje referencje na dane i na ich podstawie tworzy nowy wezel
+      iter++;
     }
   }
 
+  //"zastapienie" innej listy
   LinkedList(LinkedList&& other)
   {
-    (void)other;
-    throw std::runtime_error("TODO");
+    this->tail = other.tail;
+    this->head = other.head;
+    this->number_of_nodes = other.number_of_nodes;
+
+    other.tail = other.head = nullptr;
+    other.number_of_nodes = 0;
   }
 
   //destruktor 
   ~LinkedList()
   {
     node_pointer tmp;
-    while(this->head != nullptr)  // nie uzywamy number_of_elements, bo usuwamy tez straznika
+    while(this->head != nullptr)  // nie uzywamy number_of_nodes, bo usuwamy tez straznika
     {
-      tmp = this->head->next;
-      delete(this->head);
-      this->head = tmp;
+      tmp = this->head;
+      this->head = this->head->next;
+      delete(tmp);
     }  
   }
 
+  //jesli listy sa rozne: usuwa elementy z listy pierwotnej i kopiuje do niej nowe elementy z other
   LinkedList& operator=(const LinkedList& other)
   {
-    (void)other;
-    throw std::runtime_error("TODO");
+    Iterator iter = other.begin();
+
+    if(this != &other)
+    {
+      erase(begin(), end());    //usuwamy elementy, ktore juz znajduja sie na naszej liscie
+      while(iter != other.end())  //kopiujemy elementy z other
+      {
+        append(*iter);
+        iter++;
+      }
+    }
+    return *this;
   }
 
+  //"zastapienie" innej listy nasza lista
   LinkedList& operator=(LinkedList&& other)
   {
-    (void)other;
-    throw std::runtime_error("TODO");
+    erase(begin(), end());
+    this->head = other.head;
+    this->tail = other.tail;
+    this->number_of_nodes = other.number_of_nodes;
+
+    other.head = nullptr;
+    other.tail = nullptr;
+
+    return *this;
   }
 
   //sprawdza, czy lista jest pusta - nie liczac wartownika - na podstawie liczby elementow w liscie
   bool isEmpty() const
   {
     bool result = false;
-    if(this->number_of_elements == 0)
+    if(this->number_of_nodes == 0)
       result = true;
     return result;
   }
@@ -105,13 +124,13 @@ public:
   //zwraca liczbe elementow listy - ale bez straznika
   size_type getSize() const
   {
-    return this->number_of_elements;
+    return this->number_of_nodes;
   }
 
   //wstawianie za ostatnim elementem - ale przed straznikiem
   void append(const Type& item)
   {
-    if(number_of_elements > 0)  //rozrozniamy 2 przypadki, bo nastepuje odwolanie do "elementu nastepnego elementu poprzedzajacego wartownika"
+    if(number_of_nodes > 0)  //rozrozniamy 2 przypadki, bo nastepuje odwolanie do "elementu nastepnego elementu poprzedzajacego wartownika"
     {
       node_pointer tmp = new Node;
       tmp->data = item;
@@ -120,7 +139,7 @@ public:
       this->tail->previous->next = tmp; //tu byloby nullptr->next przy liczbie elementow rownej 0, dodatkowo brak przestawienia head
       this->tail->previous = tmp;
 
-      (this->number_of_elements)++;
+      (this->number_of_nodes)++;
     }
     else
       prepend(item);
@@ -137,67 +156,134 @@ public:
 
     tmp->data = item;
 
-    (this->number_of_elements)++;
+    (this->number_of_nodes)++;
   }
 
+  //wstawia nowy wezel za wezel wskazany przez iterator
   void insert(const const_iterator& insertPosition, const Type& item)
   {
-    (void)insertPosition;
-    (void)item;
-    throw std::runtime_error("TODO");
+    Iterator iter = insertPosition;
+    Node *curr, *new_node;
+
+    if(insertPosition == this->begin())
+      prepend(item);
+    else if(insertPosition == this->end())
+      append(item);
+    else
+    {
+        curr = reinterpret_cast<Node*>(&*iter);
+        new_node = new Node();
+        new_node->next = curr;
+        new_node->previous = curr->previous;
+        curr->previous->next = new_node;
+        curr->previous = new_node;
+        new_node->data = item;
+        (this->number_of_nodes)++;
+    }
   }
 
-  //zdejmuje pierwszy element z listy
+  //zdejmuje pierwszy element z listy - zwraca wartosc, usuwa wezel
   Type popFirst()
   {
-    throw std::runtime_error("TODO");
+    node_pointer tmp = this->head;
+    Type data;
+
+    //lista jest pusta
+    if(this->isEmpty() == true)
+      throw std::logic_error("Lista jest pusta");
+
+    //lista ma co najmniej jeden element
+    data = this->head->data;
+    this->head->next->previous = nullptr;  //dziala nawet gdy na liscie ma pozostac sam wartownik
+    this->head = this->head->next;
+    (this->number_of_nodes)--;
+
+    delete tmp;
+    return data;
   }
 
   //zdejmuje ostatni element z listy - ale nie straznika
   Type popLast()
   {
-    throw std::runtime_error("TODO");
+    node_pointer tmp = this->tail->previous;
+    Type data;
+
+    //lista pusta lub 1 element - rozwiazanie z popFirst
+    if(this->number_of_nodes <= 1)
+      return this->popFirst();
+    //lista ma wiecej niz jeden element
+    data = tmp->data;
+    tmp->previous->next = tmp->next;  //istnieje previous (bo jest wiecej niz jeden element)
+    tmp->next->previous = tmp->previous;
+    (this->number_of_nodes)--;
+
+    delete tmp;
+    return data;
   }
 
   //wymazuje z listy zadany element
-  void erase(const const_iterator& possition)
+  void erase(const const_iterator& position)
   {
-    (void)possition;
-    throw std::runtime_error("TODO");
+    if(position == this->end())
+      throw std::out_of_range("Nie mozna usunac straznika");
+
+    Iterator iter = position;
+    Node* curr_node = reinterpret_cast<Node*>(&*iter);
+
+    //usuwany jest pierwszy element => musimy zmienic head
+    if (curr_node->previous == nullptr)
+        this->head = curr_node->next;
+    //istnieje element poprzedzajacy => musimy zmienic jego wskazanie na el. nastepny
+    else
+        curr_node->previous->next = curr_node->next;
+
+    curr_node->next->previous = curr_node->previous;
+    (this->number_of_nodes)--;
+    delete curr_node;
   }
 
+  //usuwa z listy elementy w zadanym przedziale
   void erase(const const_iterator& firstIncluded, const const_iterator& lastExcluded)
   {
-    (void)firstIncluded;
-    (void)lastExcluded;
-    throw std::runtime_error("TODO");
+    for (Iterator tmp = firstIncluded; tmp != lastExcluded;)
+    {
+        Iterator tmp_next = tmp + 1;
+        erase(tmp);
+        tmp = tmp_next;
+    }
   }
 
+  //zwraca iterator na poczatek
   iterator begin()
   {
-    return Iterator(head);
+    return Iterator(this->head);
   }
-
+  
+  //zwraca iterator na koniec
   iterator end()
   {
-    return Iterator(tail);
+    return Iterator(this->tail);
   }
 
+  //zwraca ConctIterator na poczatek
   const_iterator cbegin() const
   {
-    return ConstIterator(head);
+    return ConstIterator(this->head);
   }
 
+  //zwraca ConstIterator na koniec
   const_iterator cend() const
   {
-    return ConstIterator(tail);
+    return ConstIterator(this->tail);
   }
 
+  //to samo co cbegin
   const_iterator begin() const
   {
     return cbegin();
   }
 
+  //to samo co cend
   const_iterator end() const
   {
     return cend();
@@ -214,57 +300,55 @@ public:
   using pointer = typename LinkedList::const_pointer;
   using reference = typename LinkedList::const_reference;
 
-private:
-  node_pointer curr;            //wskaznik na "aktualny"
+protected:
+  node_pointer curr;            //wskaznik na "aktualny" wezel
 
 public:
-
   ConstIterator() = delete;
-  //konstruktor jawny => inicjalizacja tylko za pomoca nawiasow () {}
-  explicit ConstIterator(node_pointer new_position) : curr(new_position) {}
-  ConstIterator(ConstIterator &other) = default;
+  explicit ConstIterator(node_pointer new_position) {curr = new_position;}//konstruktor jawny => inicjalizacja tylko za pomoca nawiasow () {}
+  ConstIterator(const ConstIterator&) = default;
 
   //operator wyluskania - zwraca wartosc elementu na jaki wskazuje
   reference operator*() const
   {
-    if(curr->next == nullptr) //iterator wskazuje na straznika
+    if(this->curr->next == nullptr)  //iterator wskazuje na straznika
       throw std::out_of_range("Iterator poza zakresem");
-    return curr->data;
+    return this->curr->data;
   }
 
   ConstIterator& operator++()
   {
-    if(curr->next == nullptr)  //iterator jest na strazniku => nie mozemy zwiekszyc iteratora
+    if(this->curr->next == nullptr)  //iterator jest na strazniku => nie mozemy zwiekszyc iteratora
       throw std::out_of_range("Iterator poza zakresem");
-    curr = curr->next;
+    this->curr = this->curr->next;
     return *this;
   }
 
   ConstIterator operator++(int)
   {
     auto tmp = *this;
-    ++(*this);
+    operator++();
     return tmp;
   }
 
   ConstIterator& operator--()
   {
-    if(curr->previous == nullptr)
-      throw out_of_range("Iterator poza zakresem");
-    curr = curr->previous;
+    if(this->curr->previous == nullptr)
+      throw std::out_of_range("Iterator poza zakresem");
+    this->curr = this->curr->previous;
     return *this;
   }
 
   ConstIterator operator--(int)
   {
     auto tmp = *this;
-    --(*this);
+    operator--();
     return tmp;
   }
 
   ConstIterator operator+(difference_type d) const
   {
-    ConstIterator tmp = *this;
+    ConstIterator tmp(this->curr);
     if(d > 0)
     {
       for(int i = 0 ; i < d ; i++)
@@ -275,7 +359,7 @@ public:
       for(int i = d ; i < 0 ; i++)
         --tmp;
     }
-    return *this;
+    return tmp;
   }
 
   ConstIterator operator-(difference_type d) const
@@ -285,12 +369,12 @@ public:
 
   bool operator==(const ConstIterator& other) const
   {
-    return (*this->curr == other->curr);
+    return (this->curr == other.curr);
   }
 
   bool operator!=(const ConstIterator& other) const
   {
-    return !(*this == other);  //jesli nie sa rowne, to nawias zwraca falsz. Za pomoca ! mieniamy go na prawde. Nie sa rowne => prawda
+    return !(*this == other);  //jesli nie sa rowne, to nawias zwraca falsz. Za pomoca ! zmieniamy go na prawde
   }
 };
 
@@ -302,7 +386,7 @@ public:
   using reference = typename LinkedList::reference;
 
   Iterator() = delete;
-  Iterator(Node *in) : ConstIterator(in) {}
+  Iterator(Node *new_position) : ConstIterator(new_position) {}
   Iterator(const ConstIterator& other) : ConstIterator(other) {}
 
   Iterator& operator++()
