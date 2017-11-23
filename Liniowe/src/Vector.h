@@ -92,7 +92,7 @@ public:
       this->number_of_elements = other.number_of_elements;
       this->max_noe = other.max_noe;
       this->vec = new value_type[this->max_noe];
-      for(size_type i = 0 ; i <= other.number_of_elements ; i++)
+      for(size_type i = 0 ; i < other.number_of_elements ; i++)
         this->vec[i] = other.vec[i];
     }
     return *this;
@@ -108,7 +108,7 @@ public:
 
     other.vec = nullptr;
     other.max_noe = other.number_of_elements = 0;
-  
+
 
     return *this;
   }
@@ -210,15 +210,18 @@ public:
   {
     Iterator fI = firstIncluded;
     Iterator lE = lastExcluded;
-    int deleted = lE.getIdx() - fI.getIdx();  //liczba usunietych elementow
+    unsigned int f = fI.getIdx();
+    unsigned int l = lE.getIdx();
 
-    while(lE != this->end())
+    unsigned int deleted = l - f;  //liczba usunietych elementow
+
+    while(l < number_of_elements)
     {
-      *fI = *lE;
-      lE++;
-      fI++;
+      this->vec[f]=this->vec[l];
+      l++;
+      f++;
     }
-    this->number_of_elements-=deleted;
+    this->number_of_elements = this->number_of_elements - deleted;
   }
 
   iterator begin()  {  return Iterator(this, 0);  }
@@ -253,7 +256,7 @@ public:
 
   reference operator*() const
   {
-    if(idx >= this->collection->getSize())  //potem sprobuje to usunac
+    if(idx >= this->collection->getSize() || idx < 0)  //potem sprobuje to usunac
       throw std::out_of_range("Indeks poza wektorem przy probie wyluskania");  //to tez
     return this->collection->vec[idx];
   }
@@ -373,7 +376,7 @@ public:
     return const_cast<reference>(ConstIterator::operator*());
   }
 
-  size_type getIdx() 
+  size_type getIdx()
   {
     return ConstIterator::getIdx();
   }

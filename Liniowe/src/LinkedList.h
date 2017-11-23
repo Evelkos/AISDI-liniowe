@@ -36,7 +36,8 @@ public:
   //konstruktor podstawowy
   LinkedList() : number_of_nodes(0)
   {
-    this->head = this->tail = new Node;  //straznik
+    this->head =  new Node();  //straznik
+    this->tail =  this->head;
     this->tail->next = nullptr;
     this->tail->previous = nullptr;
   }
@@ -69,7 +70,7 @@ public:
     other.number_of_nodes = 0;
   }
 
-  //destruktor 
+  //destruktor
   ~LinkedList()
   {
     node_pointer tmp;
@@ -78,7 +79,7 @@ public:
       tmp = this->head;
       this->head = this->head->next;
       delete(tmp);
-    }  
+    }
   }
 
   //jesli listy sa rozne: usuwa elementy z listy pierwotnej i kopiuje do niej nowe elementy z other
@@ -171,7 +172,7 @@ public:
       append(item);
     else
     {
-        curr = reinterpret_cast<Node*>(&*iter);
+        curr = iter.getCurr();
         new_node = new Node();
         new_node->next = curr;
         new_node->previous = curr->previous;
@@ -228,7 +229,7 @@ public:
       throw std::out_of_range("Nie mozna usunac straznika");
 
     Iterator iter = position;
-    Node* curr_node = reinterpret_cast<Node*>(&*iter);
+    Node* curr_node = iter.getCurr();  //poczatek bloku innego typu danych
 
     //usuwany jest pierwszy element => musimy zmienic head
     if (curr_node->previous == nullptr)
@@ -258,7 +259,7 @@ public:
   {
     return Iterator(this->head);
   }
-  
+
   //zwraca iterator na koniec
   iterator end()
   {
@@ -376,6 +377,8 @@ public:
   {
     return !(*this == other);  //jesli nie sa rowne, to nawias zwraca falsz. Za pomoca ! zmieniamy go na prawde
   }
+
+  node_pointer getCurr() const {return curr;}
 };
 
 template <typename Type>
@@ -429,6 +432,9 @@ public:
   {
     return const_cast<reference>(ConstIterator::operator*());
   }
+
+  node_pointer getCurr() const {return const_cast<node_pointer>(ConstIterator::getCurr());}
+
 };
 
 }
