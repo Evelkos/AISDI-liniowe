@@ -101,13 +101,14 @@ public:
   //zastapienie wektora other
   Vector& operator=(Vector&& other)
   {
-    delete vec;
+    delete [] vec;
     this->vec = other.vec;
     this->max_noe = other.max_noe;
     this->number_of_elements = other.number_of_elements;
 
     other.vec = nullptr;
     other.max_noe = other.number_of_elements = 0;
+  
 
     return *this;
   }
@@ -127,7 +128,7 @@ public:
   //wstawianie na pierwszym wolnym miejscu
   void append(const Type& item)
   {
-    if(this->number_of_elements + 1 >= this->max_noe)  //czy nie musi byc >= ?
+    if(this->number_of_elements == this->max_noe)  //bo to oznacza, ze po dodaniu bedzie wieksze
       this->rozszerz();
     this->vec[this->number_of_elements] = item;
     (this->number_of_elements)++;
@@ -139,7 +140,7 @@ public:
       this->append(item);
     else
     {
-      if(this->number_of_elements + 1 >= this->max_noe)  //czy nie musi byc >= ?
+      if(this->number_of_elements == this->max_noe)
         this->rozszerz();
       for(size_type i = this->number_of_elements ; i > 0 ; i--){  this->vec[i] = this->vec[i-1];  }
       this->vec[0] = item;
@@ -157,7 +158,7 @@ public:
       this->append(item);
     else
     {
-      if(this->number_of_elements + 1 > this->max_noe)  //czy nie musi byc >= ?
+      if(this->number_of_elements == this->max_noe)
         this->rozszerz();
       for(size_type i = this->number_of_elements ; i > iP.getIdx() ; i--)
         this->vec[i] = this->vec[i-1];
@@ -219,23 +220,7 @@ public:
     }
     this->number_of_elements-=deleted;
   }
-/*
-  //zwraca referencje na obiekt pod podanym indeksem
-  const_reference operator[](size_type index) const
-  {
-    if(index >= number_of_elements)
-      throw std::out_of_range("Indeks poza wektorem");
-    return vec[index];
-  }
 
-  //zwraca referencje na obiekt pod podanym indeksem
-  reference operator[](size_type index)
-  {
-    if(index >= this->number_of_elements)
-      throw std::out_of_range("Indeks poza wektorem");
-    return vec[index];
-  }
-*/
   iterator begin()  {  return Iterator(this, 0);  }
   iterator end()  {  return Iterator(this, this->number_of_elements);  }  //zwraca iterator za ostatnim elementem wektora
   const_iterator cbegin() const  {  return ConstIterator(this, 0);  }
