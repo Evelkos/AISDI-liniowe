@@ -25,128 +25,232 @@ public:
   using iterator = Iterator;
   using const_iterator = ConstIterator;
 
-  Vector()
-  {}
+private:
+  size_type number_of_elements;  //liczba elementow aktualnie znajdujacych sie w wektorze
+  size_type max_noe;  //liczba elementow, jakie maksymalnie moga znajdowac sie w wektorze (bez nowej alokacji)
+  pointer vec;  //wskaznik na poczatek wektora - zerowy element
 
-  Vector(std::initializer_list<Type> l)
+  //rozszerzanie wektora
+  void rozszerz()
   {
-    (void)l; // disables "unused argument" warning, can be removed when method is implemented.
-    throw std::runtime_error("TODO");
+    Type* tmp;
+    if(this->max_noe <= 2)
+      throw std::runtime_error("max_noe <= 2");
+    this->max_noe = (this->max_noe)*2;
+    tmp = new Type[this->max_noe];
+    for(size_type i = 0 ; i < this->number_of_elements ; i++)
+      tmp[i] = this->vec[i];
+    delete [] vec;
+    this->vec = tmp;
   }
 
+public:
+  //konstruktor podstawowy
+  Vector()
+  {
+    this->vec = new value_type[4];
+    this->max_noe = 4;
+    this->number_of_elements = 0;
+  }
+
+  //konstruktor z lista
+  Vector(std::initializer_list<Type> l) : Vector()  {  for (auto& x : l) append(x);  }
+
+  //konstruktor kopiujacy
   Vector(const Vector& other)
   {
-    (void)other;
-    throw std::runtime_error("TODO");
+    this->max_noe = other.max_noe;
+    this->number_of_elements = other.number_of_elements;
+    this->vec = new value_type[this->max_noe];
+    for(size_type i = 0 ; i < this->number_of_elements ; i++)
+      this->vec[i] =other.vec[i];
   }
 
+  //"zastapienie" innego wektora
   Vector(Vector&& other)
   {
-    (void)other;
-    throw std::runtime_error("TODO");
+    this->vec = other.vec;
+    this->max_noe = other.max_noe;
+    this->number_of_elements = other.number_of_elements;
+
+    other.vec = nullptr;
+    other.max_noe = other.number_of_elements = 0;
   }
 
+  //destruktor
   ~Vector()
-  {}
+  {
+    delete [] this->vec;
+  }
 
+  //usuwamy poprzednia zawartosc wektora i kopiowanie zawartosci wektora other
   Vector& operator=(const Vector& other)
   {
-    (void)other;
-    throw std::runtime_error("TODO");
+    if (this != &other)
+    {
+      delete [] vec;
+      this->number_of_elements = other.number_of_elements;
+      this->max_noe = other.max_noe;
+      this->vec = new value_type[this->max_noe];
+      for(size_type i = 0 ; i <= other.number_of_elements ; i++)
+        this->vec[i] = other.vec[i];
+    }
+    return *this;
   }
 
+  //zastapienie wektora other
   Vector& operator=(Vector&& other)
   {
-    (void)other;
-    throw std::runtime_error("TODO");
+    delete vec;
+    this->vec = other.vec;
+    this->max_noe = other.max_noe;
+    this->number_of_elements = other.number_of_elements;
+
+    other.vec = nullptr;
+    other.max_noe = other.number_of_elements = 0;
+
+    return *this;
   }
 
+  //zwraca czy wektor jest pusty na podstawie liczby jego elementow
   bool isEmpty() const
   {
-    throw std::runtime_error("TODO");
+    return (this->number_of_elements == 0);
   }
 
+  //zwraca liczbe elementow wektora
   size_type getSize() const
   {
-    throw std::runtime_error("TODO");
+    return this->number_of_elements;
   }
 
+  //wstawianie na pierwszym wolnym miejscu
   void append(const Type& item)
   {
-    (void)item;
-    throw std::runtime_error("TODO");
+    if(this->number_of_elements + 1 >= this->max_noe)  //czy nie musi byc >= ?
+      this->rozszerz();
+    this->vec[this->number_of_elements] = item;
+    (this->number_of_elements)++;
   }
-
+  //wstawianie przed wszystkie elementy
   void prepend(const Type& item)
   {
-    (void)item;
-    throw std::runtime_error("TODO");
+    if(this->number_of_elements == 0)
+      this->append(item);
+    else
+    {
+      if(this->number_of_elements + 1 >= this->max_noe)  //czy nie musi byc >= ?
+        this->rozszerz();
+      for(size_type i = this->number_of_elements ; i > 0 ; i--){  this->vec[i] = this->vec[i-1];  }
+      this->vec[0] = item;
+      (this->number_of_elements)++;
+    }
   }
 
+  //wstawia element do wektora
   void insert(const const_iterator& insertPosition, const Type& item)
   {
-    (void)insertPosition;
-    (void)item;
-    throw std::runtime_error("TODO");
+    Iterator iP = insertPosition;
+    if(insertPosition == this->begin())
+      this->prepend(item);
+    else if(insertPosition == this->end())
+      this->append(item);
+    else
+    {
+      if(this->number_of_elements + 1 > this->max_noe)  //czy nie musi byc >= ?
+        this->rozszerz();
+      for(size_type i = this->number_of_elements ; i > iP.getIdx() ; i--)
+        this->vec[i] = this->vec[i-1];
+      this->vec[iP.getIdx()] = item;
+      (this->number_of_elements)++;
+    }
   }
 
+  //"podniesienie" pierwszego elementu z wektora
   Type popFirst()
   {
-    throw std::runtime_error("TODO");
+    Type tmp;
+    if(this->number_of_elements == 0)
+      throw std::logic_error("Nie ma elementow, ktore moznaby podniesc");
+    tmp = this->vec[0];
+    for(size_type i = 0 ; i < number_of_elements - 1 ; i++)
+      this->vec[i] = this->vec[i+1];
+    (this->number_of_elements)--;
+    return tmp;
   }
 
+  //"podniesienie" ostatniego elementu z wektora
   Type popLast()
   {
-    throw std::runtime_error("TODO");
+    if(this->number_of_elements == 0)
+      throw std::logic_error("Nie ma elementow, ktore moznaby podniesc");
+    (this->number_of_elements)--;
+    return this->vec[number_of_elements];
   }
 
+  //usuniecie elementu z danej pozycji
   void erase(const const_iterator& possition)
   {
-    (void)possition;
-    throw std::runtime_error("TODO");
+    Iterator poss = possition;
+    if(possition == this->end())
+      throw std::out_of_range("Koniec");
+    if(this->number_of_elements == 0)
+      throw std::out_of_range("Nie ma elementow, ktore mozna usunac");
+
+    else if(poss.getIdx() < this->number_of_elements - 1)  //dla el. ost. nic nie zmieniamy - wystarczy zmniejszenie number_of_elements
+    {
+      for(size_type i = poss.getIdx() ; i < this->number_of_elements -1 ; i++)
+        this->vec[i] = this->vec[i+1];
+    }
+    (this->number_of_elements)--;
   }
 
   void erase(const const_iterator& firstIncluded, const const_iterator& lastExcluded)
   {
-    (void)firstIncluded;
-    (void)lastExcluded;
-    throw std::runtime_error("TODO");
+    Iterator fI = firstIncluded;
+    Iterator lE = lastExcluded;
+    int deleted = lE.getIdx() - fI.getIdx();  //liczba usunietych elementow
+
+    while(lE != this->end())
+    {
+      *fI = *lE;
+      lE++;
+      fI++;
+    }
+    this->number_of_elements-=deleted;
+  }
+/*
+  //zwraca referencje na obiekt pod podanym indeksem
+  const_reference operator[](size_type index) const
+  {
+    if(index >= number_of_elements)
+      throw std::out_of_range("Indeks poza wektorem");
+    return vec[index];
   }
 
-  iterator begin()
+  //zwraca referencje na obiekt pod podanym indeksem
+  reference operator[](size_type index)
   {
-    throw std::runtime_error("TODO");
+    if(index >= this->number_of_elements)
+      throw std::out_of_range("Indeks poza wektorem");
+    return vec[index];
   }
-
-  iterator end()
-  {
-    throw std::runtime_error("TODO");
-  }
-
-  const_iterator cbegin() const
-  {
-    throw std::runtime_error("TODO");
-  }
-
-  const_iterator cend() const
-  {
-    throw std::runtime_error("TODO");
-  }
-
-  const_iterator begin() const
-  {
-    return cbegin();
-  }
-
-  const_iterator end() const
-  {
-    return cend();
-  }
+*/
+  iterator begin()  {  return Iterator(this, 0);  }
+  iterator end()  {  return Iterator(this, this->number_of_elements);  }  //zwraca iterator za ostatnim elementem wektora
+  const_iterator cbegin() const  {  return ConstIterator(this, 0);  }
+  const_iterator cend() const  {  return ConstIterator(this, this->number_of_elements);  }
+  const_iterator begin() const  {  return cbegin();  }
+  const_iterator end() const  {  return cend();  }
 };
 
 template <typename Type>
 class Vector<Type>::ConstIterator
 {
+protected:
+  const Vector<Type> *collection;
+  size_type idx;
+
 public:
   using iterator_category = std::bidirectional_iterator_tag;
   using value_type = typename Vector::value_type;
@@ -154,57 +258,78 @@ public:
   using pointer = typename Vector::const_pointer;
   using reference = typename Vector::const_reference;
 
-  explicit ConstIterator()
-  {}
+  ConstIterator() = delete;
+  explicit ConstIterator(const Vector<Type> *vector, size_type i)
+  {
+    this->collection = vector;
+    idx = i;
+  }
+  ConstIterator(const ConstIterator&) = default;
 
   reference operator*() const
   {
-    throw std::runtime_error("TODO");
+    if(idx >= this->collection->getSize())  //potem sprobuje to usunac
+      throw std::out_of_range("Indeks poza wektorem przy probie wyluskania");  //to tez
+    return this->collection->vec[idx];
   }
 
   ConstIterator& operator++()
   {
-    throw std::runtime_error("TODO");
+    if(this->idx >= this->collection->getSize())
+      throw std::out_of_range("Iterator poza zakresem przy probie inkrementacji");
+    (this->idx)++;
+    return *this;
   }
 
   ConstIterator operator++(int)
   {
-    throw std::runtime_error("TODO");
+    auto tmp = *this;
+    operator++();
+    return tmp;
   }
 
   ConstIterator& operator--()
   {
-    throw std::runtime_error("TODO");
+    if(idx <= 0)
+      throw std::out_of_range("Iterator poza zakresem przy probie dekrementacji");
+    (this->idx)--;
+    return *this;
   }
 
   ConstIterator operator--(int)
   {
-    throw std::runtime_error("TODO");
+    auto tmp = *this;
+    operator--();
+    return tmp;
   }
 
   ConstIterator operator+(difference_type d) const
   {
-    (void)d;
-    throw std::runtime_error("TODO");
+    ConstIterator iter(*this);
+    if(d > 0){  while(d > 0){  ++iter;  d--;  } }
+    if(d < 0){  while(d < 0){  --iter;  d++;  } }
+    return iter;
   }
 
   ConstIterator operator-(difference_type d) const
   {
-    (void)d;
-    throw std::runtime_error("TODO");
+    return operator+(-d);
   }
 
   bool operator==(const ConstIterator& other) const
   {
-    (void)other;
-    throw std::runtime_error("TODO");
+    bool result = false;
+    if(this->collection == other.collection && this->idx == other.idx)
+      result = true;
+    return result;
   }
 
   bool operator!=(const ConstIterator& other) const
   {
-    (void)other;
-    throw std::runtime_error("TODO");
+    return !(*this == other);
   }
+
+  size_type getIdx() {  return idx;  }
 };
 
 template <typename Type>
@@ -214,8 +339,9 @@ public:
   using pointer = typename Vector::pointer;
   using reference = typename Vector::reference;
 
-  explicit Iterator()
-  {}
+  Iterator() = delete;
+  explicit Iterator(const Vector<Type> *vector, size_type i) : ConstIterator(vector, i) {}
+  Iterator(Iterator&) = default;
 
   Iterator(const ConstIterator& other)
     : ConstIterator(other)
@@ -259,8 +385,12 @@ public:
 
   reference operator*() const
   {
-    // ugly cast, yet reduces code duplication.
     return const_cast<reference>(ConstIterator::operator*());
+  }
+
+  size_type getIdx() 
+  {
+    return ConstIterator::getIdx();
   }
 };
 
